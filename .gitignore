@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Private keys and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Generated JWTs
+*.jwt
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+.venv/
+
+# Private / local-only content
+_private/
