@@ -1,0 +1,5 @@
+name: env-demo-dev
+variables:
+  - name: mcpUrl
+    value: https://flex-gateway-managed-demo-dev-hphhc4.9e1mu3.usa-e2.cloudhub.io/mcp
+    description: "MCP Server Consumer Endpoint"

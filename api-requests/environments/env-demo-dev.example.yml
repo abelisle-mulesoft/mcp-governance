@@ -1,0 +1,5 @@
+name: env-demo-dev
+variables:
+  - name: mcpUrl
+    value: <consumer-endpoint>
+    description: "MCP Server Consumer Endpoint"

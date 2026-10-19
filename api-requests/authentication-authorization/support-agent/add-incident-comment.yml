@@ -1,0 +1,51 @@
+info:
+  name: Add Incident Comment
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{mcpUrl}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{supportAgentJwt}}
+    - name: Content-Type
+      value: application/json
+    - name: Accept
+      value: application/json, text/event-stream
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "add_incident_comment",
+          "arguments": {
+            "id": "{{incidentId}}",
+            "body": {
+              "author": "Jane Smith",
+              "text": "Comment added to validate MCP ABAC permissions for the Support Agent persona."
+            }
+          }
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const response = res.getBody();
+
+        test('Support Agent can add incident comments', function () {
+          expect(response.error).to.be.undefined;
+          expect(response.result.isError).to.equal(false);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

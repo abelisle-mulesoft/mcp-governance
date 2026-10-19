@@ -1,0 +1,19 @@
+info:
+  name: administrator
+  type: folder
+
+request:
+  scripts:
+    - type: before-request
+      code: |-
+        const fs = require('fs');
+        const path = require('path');
+
+        const jwtPath = path.resolve(
+          bru.cwd(),
+          '../credentials/administrator.jwt'
+        );
+
+        const jwt = fs.readFileSync(jwtPath, 'utf8').trim();
+
+        bru.setVar('administratorJwt', jwt);

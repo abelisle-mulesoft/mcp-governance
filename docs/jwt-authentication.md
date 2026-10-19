@@ -21,16 +21,16 @@ From the repository root:
 # Generate RSA private key
 openssl genpkey -algorithm RSA \
   -pkeyopt rsa_keygen_bits:2048 \
-  -out _private/private.pem
+  -out credentials/private.pem
 
 # Extract public key
 openssl pkey \
-  -in _private/private.pem \
+  -in credentials/private.pem \
   -pubout \
-  -out _private/public.pem
+  -out credentials/public.pem
 
 # Restrict private key permissions
-chmod 600 _private/private.pem
+chmod 600 credentials/private.pem
 ```
 
 ### Verify RSA Keys
@@ -38,7 +38,7 @@ chmod 600 _private/private.pem
 Verify the private key:
 
 ```bash
-openssl rsa -in _private/private.pem -check -noout
+openssl rsa -in credentials/private.pem -check -noout
 ```
 
 Expected output:
@@ -50,7 +50,7 @@ RSA key ok
 Inspect the public key:
 
 ```bash
-openssl rsa -pubin -in _private/public.pem -text -noout
+openssl rsa -pubin -in credentials/public.pem -text -noout
 ```
 
 The output should identify a 2048-bit RSA public key.
@@ -60,7 +60,7 @@ The output should identify a 2048-bit RSA public key.
 
 ### Key Storage
 
-Both keys are stored locally in `_private/`, which is excluded from Git.
+Both keys are stored locally in `credentials/`, which is excluded from Git.
 
 > [!IMPORTANT]
 > The private key must never be committed or shared. Only the public key is configured in Omni Gateway.
@@ -101,7 +101,7 @@ Generate an Employee JWT:
 python scripts/generate-token.py employee
 ```
 
-The utility reads the RSA private key from `_private/private.pem` and generates a JWT with the following claims:
+The utility reads the RSA private key from `credentials/private.pem` and generates a JWT with the following claims:
 
 | Claim   | Value                         | Description                    |
 | ------- | ----------------------------- | ------------------------------ |
@@ -119,7 +119,7 @@ JWTs use the RS256 signing algorithm and expire after one hour.
 Generate an Employee JWT and save it locally:
 
 ```bash
-python scripts/generate-token.py employee > _private/employee.jwt
+python scripts/generate-token.py employee > credentials/employee.jwt
 ```
 
 Validate the JWT using the RSA public key:
@@ -129,8 +129,8 @@ python - <<'PY'
 from pathlib import Path
 import jwt
 
-token = Path("_private/employee.jwt").read_text().strip()
-public_key = Path("_private/public.pem").read_bytes()
+token = Path("credentials/employee.jwt").read_text().strip()
+public_key = Path("credentials/public.pem").read_bytes()
 
 claims = jwt.decode(
     token,
@@ -149,7 +149,7 @@ Successful validation returns the decoded JWT claims, including the employee ide
 This confirms that the JWT signature can be verified using the public key and that the issuer, audience, and expiration claims are valid.
 
 > [!NOTE]
-> Generated JWTs are stored in `_private/`, which is excluded from Git. Tokens should be treated as credentials and regenerated when expired.
+> Generated JWTs are stored in `credentials/`, which is excluded from Git. Tokens should be treated as credentials and regenerated when expired.
 
 ## Omni Gateway JWT Validation
 
@@ -178,7 +178,7 @@ The JWT Key field requires the Base64-encoded public key without the PEM delimit
 
 ```bash
 sed '/-----BEGIN PUBLIC KEY-----/d; /-----END PUBLIC KEY-----/d' \
-  _private/public.pem | tr -d '\n'
+  credentials/public.pem | tr -d '\n'
 echo
 ```
 
@@ -226,7 +226,7 @@ The following request includes an Employee JWT in the HTTP Authorization header:
 
 ```bash
 curl -sS -i -X POST "$MCP_URL" \
-  -H "Authorization: Bearer $(cat _private/employee.jwt)" \
+  -H "Authorization: Bearer $(cat credentials/employee.jwt)" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   -d '{

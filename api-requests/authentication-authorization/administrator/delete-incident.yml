@@ -1,0 +1,47 @@
+info:
+  name: Delete Incident
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{mcpUrl}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{administratorJwt}}
+    - name: Content-Type
+      value: application/json
+    - name: Accept
+      value: application/json, text/event-stream
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "delete_incident",
+          "arguments": {
+            "id": "{{incidentId}}"
+          }
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const response = res.getBody();
+
+        test('Administrator can delete incidents', function () {
+          expect(response.error).to.be.undefined;
+          expect(response.result.isError).to.equal(false);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

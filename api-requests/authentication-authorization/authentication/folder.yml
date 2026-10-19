@@ -1,0 +1,38 @@
+info:
+  name: authentication
+  type: folder
+  seq: 1
+
+request:
+  scripts:
+    - type: before-request
+      code: |-
+        const fs = require('fs');
+        const path = require('path');
+
+        const jwtPath = path.resolve(
+          bru.cwd(),
+          '../credentials/employee.jwt'
+        );
+
+        const jwt = fs.readFileSync(jwtPath, 'utf8').trim();
+
+        bru.setVar('employeeJwt', jwt);
+
+        const expiredJwtPath = path.resolve(
+          bru.cwd(),
+          '../credentials/employee-expired.jwt'
+        );
+
+        const expiredJwt = fs.readFileSync(expiredJwtPath, 'utf8').trim();
+
+        bru.setVar('employeeExpiredJwt', expiredJwt);
+
+        const wrongAudienceJwtPath = path.resolve(
+          bru.cwd(),
+          '../credentials/employee-wrong-audience.jwt'
+        );
+
+        const wrongAudienceJwt = fs.readFileSync(wrongAudienceJwtPath, 'utf8').trim();
+
+        bru.setVar('employeeWrongAudienceJwt', wrongAudienceJwt);

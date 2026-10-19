@@ -1,0 +1,20 @@
+info:
+  name: support-agent
+  type: folder
+  seq: 3
+
+request:
+  scripts:
+    - type: before-request
+      code: |-
+        const fs = require('fs');
+        const path = require('path');
+
+        const jwtPath = path.resolve(
+          bru.cwd(),
+          '../credentials/support-agent.jwt'
+        );
+
+        const jwt = fs.readFileSync(jwtPath, 'utf8').trim();
+
+        bru.setVar('supportAgentJwt', jwt);

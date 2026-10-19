@@ -1,0 +1,47 @@
+info:
+  name: Get Incident
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{mcpUrl}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{supportAgentJwt}}
+    - name: Content-Type
+      value: application/json
+    - name: Accept
+      value: application/json, text/event-stream
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "get_incident",
+          "arguments": {
+            "id": "INC-1001"
+          }
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const response = res.getBody();
+
+        test('Support Agent can retrieve incidents', function () {
+          expect(response.error).to.be.undefined;
+          expect(response.result.isError).to.equal(false);
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

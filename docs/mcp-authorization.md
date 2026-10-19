@@ -6,9 +6,11 @@ The MCP Attribute-Based Access Control (ABAC) policy requires an authentication 
 
 ## MCP ABAC Configuration
 
-The MCP ABAC policy is configured with separate Cedar expressions for the Employee and Support Agent personas. Each expression evaluates the authenticated JWT’s `roles` claim and grants access to the corresponding MCP tools. The Authentication Type is set to `Other` because authentication is provided by the JWT Validation policy.
+The MCP ABAC policy is configured with three separate Cedar expressions, one for each persona: Employee, Support Agent, and Administrator. Each expression evaluates the authenticated JWT’s `roles` claim and grants access to the corresponding MCP tools. The Authentication Type is set to `Other` because authentication is provided by the JWT Validation policy.
 
 ![MCP ABAC persona-based Cedar expressions](images/mcp-abac-persona-rules.png)
+
+**Scope:** This implementation enforces tool-level authorization only. Record-level authorization, such as restricting access to incidents owned by the caller, was not implemented or validated.
 
 ### Policy Ordering
 
@@ -20,7 +22,7 @@ The following inbound policy order was used during authorization testing:
 4. Attribute-Based Access Control
 5. MCP Transcoding Router
 
-![Omni Gateway inbound policy order](images/mcp-abac-policy-order.png)
+![Omni Gateway inbound policy order](images/mcp-abac-policy-order-jwt.png)
 
 > [!NOTE]
 > Testing demonstrated that:
@@ -47,8 +49,6 @@ The Employee persona may list, retrieve, and create incidents, and add comments.
 | `assign_incident` | Deny |
 | `delete_incident` | Deny |
 | `update_incident` | Deny |
-
-**Scope:** This implementation enforces tool-level authorization only. Record-level authorization, such as restricting access to incidents owned by the caller, was not implemented or validated.
 
 ### Cedar Policy
 
@@ -121,39 +121,68 @@ when {
 
 The expression permits `tools/call` only when the authenticated principal has the `support-agent` role and the requested tool appears in the permitted set. Incident deletion is denied.
 
+## Administrator Persona
+
+The Administrator JWT includes the claim:
+
+```json
+{"roles": ["administrator"]}
+```
+
+The Administrator persona may invoke all seven MCP tools, including incident deletion.
+
+| MCP Tool | Administrator Permission |
+| --- | --- |
+| `list_incidents` | Allow |
+| `get_incident` | Allow |
+| `create_incident` | Allow |
+| `add_incident_comment` | Allow |
+| `assign_incident` | Allow |
+| `delete_incident` | Allow |
+| `update_incident` | Allow |
+
+### Cedar Policy
+
+The policy is maintained in [`policies/administrator.cedar`](../policies/administrator.cedar):
+
+```cedar
+permit(
+    principal,
+    action == Action::"tools/call",
+    resource
+)
+when {
+    principal.properties.claims.roles.contains("administrator") &&
+    [
+        Tool::"list_incidents",
+        Tool::"get_incident",
+        Tool::"create_incident",
+        Tool::"add_incident_comment",
+        Tool::"assign_incident",
+        Tool::"update_incident",
+        Tool::"delete_incident"
+    ].contains(resource)
+};
+```
+
+The expression permits `tools/call` only when the authenticated principal has the `administrator` role and the requested tool appears in the permitted set.
+
 ## Authorization Testing
 
-### Employee Persona
+Authorization was validated using the Bruno collection in [`api-requests/`](../api-requests/). The collection exercises all seven MCP tools against the Employee, Support Agent, and Administrator personas.
 
-Tests were performed with an Employee JWT and JSON-RPC requests to the MCP endpoint. The permitted operations were invoked against the Service Desk API; denied operations used a nonexistent incident ID (`INC-999999`) to avoid unintended changes if authorization failed.
+Each persona creates a test incident and stores its identifier in the Bruno runtime variable `incidentId`. Subsequent operations, including denied operations, reference that incident to ensure authorization behavior is evaluated independently of incident existence.
 
-| MCP Tool | Expected | Observed | HTTP Status |
-| --- | --- | --- | --- |
-| `list_incidents` | Allow | Incident list returned | 200 OK |
-| `get_incident` | Allow | Incident `INC-1001` returned | 200 OK |
-| `create_incident` | Allow | Incident `INC-1015` created | 201 Created |
-| `add_incident_comment` | Allow | Comment added to `INC-1015` | 200 OK |
-| `assign_incident` | Deny | Access denied | 200 OK |
-| `delete_incident` | Deny | Access denied | 200 OK |
-| `update_incident` | Deny | Access denied | 200 OK |
+The collection uses JavaScript assertions to verify successful MCP tool execution and expected authorization denials.
 
-All seven tool invocation tests produced the expected authorization outcome.
+| Persona | Permitted | Denied | Result |
+| --- | ---: | ---: | --- |
+| Employee | 4 | 3 | All passed |
+| Support Agent | 6 | 1 | All passed |
+| Administrator | 7 | 0 | All passed |
+| **Total** | **17** | **4** | **21 passed** |
 
-### Support Agent Persona
-
-Tests were performed with a Support Agent JWT and JSON-RPC requests to the MCP endpoint. All seven tools were invoked to validate the permissions defined in the Cedar policy. The denied `delete_incident` operation used a nonexistent incident ID (`INC-999999`) to avoid unintended changes if authorization failed.
-
-| MCP Tool | Expected | Observed |
-| --- | --- | --- |
-| `list_incidents` | Allow | Incident list returned |
-| `get_incident` | Allow | Incident retrieved |
-| `create_incident` | Allow | Incident created |
-| `add_incident_comment` | Allow | Comment added |
-| `assign_incident` | Allow | Incident assigned |
-| `delete_incident` | Deny | Access denied |
-| `update_incident` | Allow | Incident updated |
-
-All seven tool invocation tests produced the expected authorization outcome. A subsequent `get_incident` request confirmed the incident modifications.
+The Bruno collection also includes four JWT authentication scenarios covering missing, valid, expired, and incorrect-audience tokens, bringing the total to 25 requests.
 
 ### Denied Invocation Response
 
@@ -180,4 +209,4 @@ A `tools/list` request using the Employee JWT returned the complete catalog of s
 > [!NOTE]
 > **Finding:** In the tested configuration, MCP ABAC restricts tool invocation but does not filter the catalog returned by `tools/list`. Unauthorized tools remain discoverable and are denied when invoked.
 
-The Employee and Support Agent personas have been implemented and validated. The Administrator persona has not yet been implemented or tested.
+All three personas—Employee, Support Agent, and Administrator—have been implemented and validated through the Bruno collection. The authorization model enforces tool-level access controls using JWT role claims and Cedar expressions configured in the MCP ABAC policy.

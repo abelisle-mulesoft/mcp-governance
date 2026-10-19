@@ -1,0 +1,50 @@
+info:
+  name: Assign Incident
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{mcpUrl}}"
+  headers:
+    - name: Authorization
+      value: Bearer {{employeeJwt}}
+    - name: Content-Type
+      value: application/json
+    - name: Accept
+      value: application/json, text/event-stream
+  body:
+    type: json
+    data: |-
+      {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "assign_incident",
+          "arguments": {
+            "id": "{{incidentId}}",
+            "body": {
+              "assignedTo": "Network Support"
+            }
+          }
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const response = res.getBody();
+
+        test('Employee cannot assign incidents', function () {
+          expect(response.error.code).to.equal(-32008);
+          expect(response.error.message).to.equal('Unable to access');
+        });
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
